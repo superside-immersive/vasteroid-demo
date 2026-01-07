@@ -4,9 +4,9 @@ if (ipad) {
   $(function () {
     $('#left-controls, #right-controls').show();
     $('body > *').hide();
-    $('body').css('margin', '0px').css('background', 'black').prepend($('#game-container').remove());
+    $('body').css('margin', '0px').css('background', '#0E142C').prepend($('#game-container').remove());
     $('#game-container').width(1024).css('margin-top', 26).show();
-    $('#canvas').attr('width', 1020).attr('height', 660).css('background', 'white').css('margin', '0 1');
+    $('#canvas').attr('width', 1020).attr('height', 660).css('background', '#0E142C').css('margin', '0 1');
 
     $('head').prepend($('<meta/>').attr('name', 'viewport').attr('content', 'width=device-width; height=device-height; initial-scale=1.0; maximum-scale=1.0; user-scalable=0;'));
 
