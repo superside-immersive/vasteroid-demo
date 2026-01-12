@@ -11,6 +11,7 @@ $(function () {
 
   var context = canvas[0].getContext("2d");
   var canvasNode = canvas[0];
+  var gameContainer = document.getElementById('game-container');
 
   // Offscreen buffer for a quick-and-dirty bloom/glow pass
   var glowCanvas = document.createElement('canvas');
@@ -22,6 +23,11 @@ $(function () {
   // Text renderer setup
   Text.context = context;
   Text.face = vector_battle;
+
+  // UI overlays
+  if (window.HUD) { HUD.init(gameContainer); }
+  if (window.Scoreboard) { Scoreboard.init(gameContainer); }
+  if (window.GameOverUI) { GameOverUI.init(gameContainer); }
 
   // Initialize FSM
   Game.FSM = GameFSM;
@@ -91,7 +97,7 @@ $(function () {
 
   // Frame timing
   var paused = false;
-  var showFramerate = false;
+  // Framerate display removed
   var avgFramerate = 0;
   var frameCount = 0;
   var elapsedCounter = 0;
@@ -145,6 +151,11 @@ $(function () {
     // Render intro if not done
     IntroManager.render(context, ship);
 
+    // Render idle animation in waiting state
+    if (window.IdleAnimationManager && Game.FSM.state === 'waiting') {
+      IdleAnimationManager.render(context);
+    }
+
     // Execute game state
     Game.FSM.execute();
 
@@ -162,30 +173,42 @@ $(function () {
     lastFrame = thisFrame;
     var delta = elapsed / 30;
 
-    // Update sprites
+    // Update sprites (but not during waiting state)
+    var inWaiting = Game.FSM.state === 'waiting';
     for (var i = 0; i < Game.sprites.length; i++) {
-      context.strokeStyle = strokeForSpriteName(Game.sprites[i].name);
-      Game.sprites[i].run(delta);
+      var sprite = Game.sprites[i];
+      if (!inWaiting) {
+        context.strokeStyle = strokeForSpriteName(sprite.name);
+        sprite.run(delta);
+      }
 
-      if (Game.sprites[i].reap) {
-        Game.sprites[i].reap = false;
+      if (sprite.reap) {
+        sprite.reap = false;
         Game.sprites.splice(i, 1);
         i--;
       }
     }
 
-    // Draw HUD
-    drawHUD(context, extraDude);
+    // Level transition overlay
+    if (window.LevelTransitionManager) {
+      LevelTransitionManager.render(context);
+    }
+
+    // HUD should only be visible during active gameplay
+    if (window.HUD && typeof HUD.show === 'function' && typeof HUD.hide === 'function') {
+      if (Game.FSM.state === 'run') HUD.show();
+      else HUD.hide();
+    }
+    if (Game.FSM.state === 'run') {
+      drawHUD(context, extraDude);
+    }
 
     // Additive bloom/glow overlay for extra punch
     if (bloomEnabled) {
       applyGlowBloom();
     }
 
-    // Framerate display
-    if (showFramerate) {
-      Text.renderText('' + avgFramerate, 24, Game.canvasWidth - 38, Game.canvasHeight - 2);
-    }
+    // (framerate display removed)
 
     // Update framerate counter
     frameCount++;
@@ -287,17 +310,16 @@ $(function () {
    * Draw heads-up display (score, lives)
    */
   function drawHUD(ctx, extraDude) {
-    // Score
-    var scoreText = '' + Game.score;
-    ctx.fillStyle = THEME.text;
-    Text.renderText(scoreText, 18, Game.canvasWidth - 14 * scoreText.length, 20);
+    HUD.updateScore(Game.score);
+    HUD.updateLives(Game.lives);
 
-    // Extra lives
+    // Keep ship icons for a subtle callback to the classic HUD
     for (var i = 0; i < Game.lives; i++) {
       ctx.save();
       ctx.strokeStyle = THEME.muted;
-      extraDude.x = Game.canvasWidth - (8 * (i + 1));
-      extraDude.y = 32;
+      ctx.globalAlpha = 0.5;
+      extraDude.x = Game.canvasWidth - (10 * (i + 1));
+      extraDude.y = 36;
       extraDude.configureTransform();
       extraDude.draw();
       ctx.restore();
@@ -310,9 +332,6 @@ $(function () {
   // Keyboard controls
   $(window).keydown(function (e) {
     switch (KEY_CODES[e.keyCode]) {
-      case 'f':
-        showFramerate = !showFramerate;
-        break;
       case 'p':
         paused = !paused;
         if (!paused) {

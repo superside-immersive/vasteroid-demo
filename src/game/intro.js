@@ -16,7 +16,45 @@ var IntroManager = {
     shipAppear: 1400,
     endHold: 0,
     targetScale: null,
-    gameTriggered: false
+    gameTriggered: false,
+    timeline: null,
+    playRequested: false,
+    props: {
+      logoScale: 0.6,
+      logoAlpha: 1,
+      shipAlpha: 0,
+      shipScale: 0.6
+    }
+  },
+
+  reset: function() {
+    if (this.state.timeline) {
+      try { this.state.timeline.pause(); } catch (e) {}
+    }
+    this.state.done = false;
+    this.state.startTime = null;
+    this.state.targetScale = null;
+    this.state.gameTriggered = false;
+    this.state.timeline = null;
+    this.state.playRequested = false;
+    this.state.props.logoScale = 0.6;
+    this.state.props.logoAlpha = 1;
+    this.state.props.shipAlpha = 0;
+    this.state.props.shipScale = 0.6;
+  },
+
+  /**
+   * Request playing the intro sequence (zoom-in) and then starting the game.
+   */
+  requestPlay: function() {
+    this.state.playRequested = true;
+    this.state.done = false;
+    this.state.startTime = null;
+    this.state.gameTriggered = false;
+    if (this.state.timeline) {
+      try { this.state.timeline.pause(); } catch (e) {}
+    }
+    this.state.timeline = null;
   },
 
   /**
@@ -48,27 +86,78 @@ var IntroManager = {
   },
 
   /**
+   * Check if logo is currently visible (for coordination with other animations)
+   */
+  isLogoVisible: function() {
+    if (this.state.done) return false;
+    return this.state.props.logoAlpha > 0.05;
+  },
+
+  /**
    * Render intro animation
    * @param {CanvasRenderingContext2D} context - Canvas context
    * @param {Ship} ship - Ship instance for overlay
    */
   render: function(context, ship) {
+    // Only render intro during waiting state
+    if (window.Game && Game.FSM && Game.FSM.state !== 'waiting') {
+      return;
+    }
+
     if (this.state.done || !this.logoLoaded) return;
+
+    // If user hasn't requested start yet, keep logo visible (no autoplay).
+    if (!this.state.playRequested) {
+      this._ensureStaticProps();
+      if (this.state.props.logoAlpha > 0.01) {
+        this._drawLogo(context, this.state.props.logoScale, this.state.props.logoAlpha);
+      }
+      return;
+    }
 
     if (!this.state.startTime) {
       this.state.startTime = Date.now();
     }
 
+    this._ensureTimeline(ship);
+
     var elapsed = Date.now() - this.state.startTime;
 
-    // Trigger game start during fade
-    if (!this.state.gameTriggered && elapsed >= this.state.fadeStart) {
+    // Trigger game start near the end so the logo doesn't disappear abruptly.
+    if (!this.state.gameTriggered && (this.state.props.logoAlpha <= 0.06 || elapsed >= (this.state.duration - 120))) {
       this.state.gameTriggered = true;
       Game.skipWaiting = true;
     }
 
-    // Calculate target scale
-    if (this.state.targetScale == null) {
+    if (elapsed >= this.state.duration + this.state.endHold) {
+      this.state.done = true;
+      return;
+    }
+
+    // Draw logo only if it has some opacity
+    if (this.state.props.logoAlpha > 0.01) {
+      this._drawLogo(context, this.state.props.logoScale, this.state.props.logoAlpha);
+    }
+
+    // Draw ship overlay
+    if (elapsed > this.state.shipAppear) {
+      this._drawShipOverlay(context, ship, elapsed, this.state.props.shipScale, this.state.props.shipAlpha);
+    }
+  },
+
+  _ensureStaticProps: function() {
+    // Keep it simple: show logo at default scale until START is pressed.
+    this.state.props.logoScale = 0.6;
+    this.state.props.logoAlpha = 1;
+    this.state.props.shipAlpha = 0;
+    this.state.props.shipScale = 0.6;
+  },
+
+  _ensureTimeline: function(ship) {
+    if (this.state.timeline) return;
+
+    // Compute targetScale once per play cycle
+    if (this.state.targetScale === null) {
       var fitBase = Math.min(
         (Game.canvasWidth * 0.58) / this.logoSize.w,
         (Game.canvasHeight * 0.43) / this.logoSize.h
@@ -82,26 +171,41 @@ var IntroManager = {
     }
 
     var startScale = this.state.targetScale * 0.6;
-    var progress = Math.min(1, elapsed / this.state.fadeStart);
-    var introScale = startScale + progress * (this.state.targetScale - startScale);
+    this.state.props.logoScale = startScale;
+    this.state.props.shipScale = startScale;
+    this.state.props.logoAlpha = 1;
+    this.state.props.shipAlpha = 0;
 
-    var introAlpha = 1;
-    if (elapsed > this.state.fadeStart) {
-      introAlpha = 1 - Math.min(1, (elapsed - this.state.fadeStart) / (this.state.duration - this.state.fadeStart));
-    }
+    var self = this;
+    this.state.timeline = anime.timeline({ autoplay: true });
 
-    if (introAlpha <= 0 || elapsed >= this.state.duration + this.state.endHold) {
-      this.state.done = true;
-      return;
-    }
+    this.state.timeline
+      .add({
+        targets: this.state.props,
+        logoScale: this.state.targetScale,
+        duration: 1400,
+        easing: 'easeOutExpo'
+      })
+      .add({
+        targets: this.state.props,
+        shipAlpha: 1,
+        shipScale: this.state.targetScale,
+        duration: 900,
+        easing: 'easeOutQuad'
+      }, '-=700')
+      .add({
+        targets: this.state.props,
+        logoAlpha: 0,
+        // Keep ship visible for a smoother handoff to gameplay.
+        shipAlpha: 1,
+        duration: 1100,
+        delay: 300,
+        easing: 'easeInQuad'
+      });
 
-    // Draw logo
-    this._drawLogo(context, introScale, introAlpha);
-
-    // Draw ship overlay
-    if (elapsed > this.state.shipAppear) {
-      this._drawShipOverlay(context, ship, elapsed, introScale);
-    }
+    this.state.timeline.finished.then(function() {
+      self.state.done = true;
+    });
   },
 
   /**
@@ -130,11 +234,7 @@ var IntroManager = {
   /**
    * Draw ship during intro
    */
-  _drawShipOverlay: function(context, ship, elapsed, introScale) {
-    var shipFadeTime = this.state.fadeStart - this.state.shipAppear;
-    var shipProgress = (elapsed - this.state.shipAppear) / shipFadeTime;
-    var shipAlpha = Math.min(1, shipProgress * 1.1);
-
+  _drawShipOverlay: function(context, ship, elapsed, introScale, shipAlpha) {
     var fit = Math.min(
       (Game.canvasWidth * 0.58) / this.logoSize.w,
       (Game.canvasHeight * 0.43) / this.logoSize.h

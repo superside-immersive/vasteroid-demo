@@ -136,6 +136,55 @@ var Asteroid = function () {
   this.chars = generateAsteroidChars(this.charCount);
   this.clusterRadius = 60;
   this.time = 0;
+
+  // Spawn-in animation state (scale + character reveal)
+  this._spawn = null;
+  this._spawnCharLimit = null;
+
+  this.beginSpawnIn = function(opts) {
+    opts = opts || {};
+    var now = Date.now();
+    var endChars = (this.chars && this.chars.length) ? this.chars.length : (this.charCount || 1);
+    var startChars = (opts.startChars != null) ? opts.startChars : Math.max(10, Math.min(50, Math.floor(endChars * 0.2)));
+    var startScale = (opts.startScale != null) ? opts.startScale : 0.22;
+    var durationMs = (opts.durationMs != null) ? opts.durationMs : 240;
+
+    this._spawn = {
+      start: now,
+      duration: durationMs,
+      startScale: startScale,
+      endScale: 1,
+      startChars: startChars,
+      endChars: endChars
+    };
+    this.scale = startScale;
+    this._spawnCharLimit = startChars;
+  };
+
+  this._updateSpawnIn = function() {
+    if (!this._spawn) return;
+    var now = Date.now();
+    var t = (now - this._spawn.start) / Math.max(1, this._spawn.duration);
+    if (t >= 1) {
+      this.scale = this._spawn.endScale;
+      this._spawnCharLimit = null;
+      this._spawn = null;
+      return;
+    }
+
+    // Ease-out quad
+    var e = 1 - (1 - t) * (1 - t);
+    this.scale = this._spawn.startScale + (this._spawn.endScale - this._spawn.startScale) * e;
+
+    var charsNow = Math.floor(this._spawn.startChars + (this._spawn.endChars - this._spawn.startChars) * e);
+    charsNow = Math.max(1, Math.min(this._spawn.endChars, charsNow));
+    this._spawnCharLimit = charsNow;
+  };
+
+  // Hook spawn updates into the normal sprite lifecycle
+  this.preMove = function(delta) {
+    this._updateSpawnIn();
+  };
   
   // Billboard alignment: fragments gradually align rotation to face user
   this.isFragment = false;
@@ -206,6 +255,9 @@ var Asteroid = function () {
     var t = this.time;
     var chars = this.chars;
     var len = chars.length;
+    if (this._spawnCharLimit != null) {
+      len = Math.min(len, this._spawnCharLimit);
+    }
     var x0 = this.x;
     var y0 = this.y;
     

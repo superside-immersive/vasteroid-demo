@@ -13,12 +13,14 @@
 
   // Set up keyboard event listeners
   $(window).keydown(function (e) {
+    if (e.target && e.target.tagName === 'INPUT') { return; }
     KEY_STATUS.keyDown = true;
     if (KEY_CODES[e.keyCode]) {
       e.preventDefault();
       KEY_STATUS[KEY_CODES[e.keyCode]] = true;
     }
   }).keyup(function (e) {
+    if (e.target && e.target.tagName === 'INPUT') { return; }
     KEY_STATUS.keyDown = false;
     if (KEY_CODES[e.keyCode]) {
       e.preventDefault();

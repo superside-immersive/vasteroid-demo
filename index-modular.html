@@ -6,8 +6,15 @@
     
     <!-- Libraries -->
     <script src="jquery-1.4.1.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
     <script src="vector_battle_regular.typeface.js"></script>
     <script src="ipad.js"></script>
+
+    <!-- Web Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600&display=swap" rel="stylesheet">
+
+    <!-- UI Styles -->
+    <link rel="stylesheet" href="src/styles/ui.css">
     
     <!-- Config -->
     <script src="src/config/constants.js"></script>
@@ -16,6 +23,12 @@
     <script src="src/utils/matrix.js"></script>
     <script src="src/utils/grid-node.js"></script>
     <script src="src/utils/text-renderer.js"></script>
+
+    <!-- UI Helpers -->
+    <script src="src/ui/animations.js"></script>
+    <script src="src/ui/hud.js"></script>
+    <script src="src/ui/scoreboard.js"></script>
+    <script src="src/ui/game-over.js"></script>
     
     <!-- Audio -->
     <script src="src/audio/sfx.js"></script>
@@ -128,6 +141,20 @@
         <kbd>M</kbd> Mute |
         <kbd>F</kbd> FPS
       </p>
+      <button id="test-next-level" style="margin-top:6px; padding:6px 10px; background:#0f162f; color:#E5E7EB; border:1px solid #1FD9FE; border-radius:6px; cursor:pointer;">Test NEXT LEVEL</button>
     </div>
+
+    <script>
+      (function() {
+        var btn = document.getElementById('test-next-level');
+        if (btn) {
+          btn.addEventListener('click', function() {
+            if (window.LevelTransitionManager && window.Game && Game.ship) {
+              LevelTransitionManager.start(Game.ship);
+            }
+          });
+        }
+      })();
+    </script>
   </body>
 </html>

@@ -30,8 +30,11 @@ var Game = {
    * Spawn asteroid clusters
    * @param {number} count - Number of asteroids to spawn
    */
-  spawnAsteroids: function (count) {
+  spawnAsteroids: function (count, opts) {
+    opts = opts || {};
     if (!count) count = this.totalAsteroids;
+    var vx = opts.velX || [-2, 2];
+    var vy = opts.velY || [-2, 2];
     
     for (var i = 0; i < count; i++) {
       var roid = new Asteroid();
@@ -46,10 +49,15 @@ var Game = {
         roid.y = Math.random() * this.canvasHeight;
       }
       
-      roid.vel.x = Math.random() * 4 - 2;
-      roid.vel.y = Math.random() * 4 - 2;
+      roid.vel.x = vx[0] + Math.random() * (vx[1] - vx[0]);
+      roid.vel.y = vy[0] + Math.random() * (vy[1] - vy[0]);
       roid.vel.rot = Math.random() * 2 - 1;
       roid.scale = 1;
+
+      // Fast, elegant spawn-in (scale + character reveal)
+      if (typeof roid.beginSpawnIn === 'function') {
+        roid.beginSpawnIn({ durationMs: 240, startScale: 0.22, startChars: Math.max(10, Math.min(50, Math.floor(charCount * 0.2))) });
+      }
       
       Game.sprites.push(roid);
     }

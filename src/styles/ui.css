@@ -1,0 +1,140 @@
+/* UI overlay styles for HUD, scoreboards, prompts */
+:root {
+  --ui-bg: rgba(14, 20, 44, 0.8);
+  --ui-panel: rgba(18, 26, 54, 0.85);
+  --ui-border: #1fd9fe;
+  --ui-glow: 0 0 16px rgba(31, 217, 254, 0.35);
+  --ui-text: #e5e7eb;
+  --ui-muted: #9ca3af;
+  --ui-accent: #7cf0ff;
+  --ui-warning: #ff6b6b;
+}
+
+body {
+  font-family: 'Orbitron', 'Courier New', monospace;
+  color: var(--ui-text);
+  background: #0E142C;
+}
+
+#game-container {
+  filter: drop-shadow(0 0 18px rgba(31, 217, 254, 0.2));
+}
+
+.ui-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 20;
+  color: var(--ui-text);
+  text-align: center;
+  font-family: 'Orbitron', 'Courier New', monospace;
+}
+
+.ui-overlay.interactive {
+  pointer-events: auto;
+  z-index: 30;
+}
+
+.ui-panel {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  background: var(--ui-panel);
+  border: 1px solid var(--ui-border);
+  box-shadow: var(--ui-glow);
+  padding: 18px 22px;
+  border-radius: 10px;
+  min-width: 320px;
+  pointer-events: auto;
+}
+
+.scoreboard-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  color: var(--ui-text);
+}
+
+.scoreboard-table th,
+.scoreboard-table td {
+  padding: 6px 4px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.scoreboard-table th {
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-weight: 600;
+  color: var(--ui-muted);
+}
+
+.scoreboard-table tr.highlight td {
+  color: var(--ui-accent);
+}
+
+.input-name {
+  width: 80%;
+  padding: 10px 12px;
+  background: #0f162f;
+  border: 1px solid var(--ui-border);
+  color: var(--ui-text);
+  font-size: 16px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  border-radius: 6px;
+  outline: none;
+  box-shadow: var(--ui-glow);
+}
+
+.prompt-pill {
+  display: inline-block;
+  margin-top: 12px;
+  padding: 6px 12px;
+  border: 1px solid var(--ui-border);
+  border-radius: 999px;
+  color: var(--ui-text);
+  background: rgba(255, 255, 255, 0.03);
+  box-shadow: var(--ui-glow);
+  letter-spacing: 1px;
+}
+
+.hud-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 14px;
+  box-sizing: border-box;
+  pointer-events: none;
+}
+
+.hud-score {
+  font-size: 18px;
+  letter-spacing: 1px;
+  text-shadow: 0 0 8px rgba(31, 217, 254, 0.45);
+}
+
+.hud-lives {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.hud-chip {
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--ui-border);
+  background: rgba(255, 255, 255, 0.03);
+  box-shadow: var(--ui-glow);
+  color: var(--ui-text);
+  letter-spacing: 1px;
+}
+
+.text-glow {
+  text-shadow: 0 0 12px rgba(124, 240, 255, 0.5);
+}
+
+.hidden { display: none !important; }

@@ -31,33 +31,63 @@ var SFX = {
   }
 };
 
-// Replace Audio objects with safe play functions (allows overlapping playback)
+// Replace Audio objects with pooled play functions (limits concurrency to avoid clipping)
 (function() {
+  var configs = {
+    laser: { max: 5, cooldown: 60, volume: 0.55 },
+    explosion: { max: 3, cooldown: 120, volume: 0.8 }
+  };
+
+  function makePool(base, config) {
+    base.preload = 'auto';
+    var pool = [];
+    var lastPlay = 0;
+    return function () {
+      if (SFX.muted) return null;
+      if (!SFX._unlocked) {
+        try { SFX.unlock(); } catch (e) {}
+      }
+      var now = Date.now();
+      if (config.cooldown && now - lastPlay < config.cooldown) return null;
+      lastPlay = now;
+
+      var audio = null;
+      for (var i = 0; i < pool.length; i++) {
+        var candidate = pool[i];
+        if (candidate.paused || candidate.ended) {
+          audio = candidate;
+          break;
+        }
+      }
+
+      if (!audio && pool.length < (config.max || 4)) {
+        audio = base.cloneNode(true);
+        audio.preload = 'auto';
+        pool.push(audio);
+      }
+
+      if (!audio && pool.length) {
+        audio = pool[0];
+      }
+
+      if (!audio) return null;
+
+      try {
+        audio.currentTime = 0;
+        audio.volume = config.volume != null ? config.volume : 1.0;
+        var playPromise = audio.play();
+        if (playPromise && typeof playPromise.catch === 'function') {
+          playPromise.catch(function () {});
+        }
+      } catch (e) {}
+
+      return audio;
+    };
+  }
+
   for (var sfx in SFX) {
     if (typeof SFX[sfx] === 'object' && SFX[sfx] instanceof Audio) {
-      (function (key) {
-        var base = SFX[key];
-        base.preload = 'auto';
-        SFX[key] = function () {
-          if (SFX.muted) return null;
-          if (!SFX._unlocked) {
-            // Attempt unlock lazily (some browsers require direct user gesture)
-            try { SFX.unlock(); } catch (e) {}
-          }
-          try {
-            var a = base.cloneNode(true);
-            a.preload = 'auto';
-            a.volume = 1.0;
-            var p = a.play();
-            if (p && typeof p.catch === 'function') {
-              p.catch(function () {});
-            }
-            return a;
-          } catch (e) {
-            return null;
-          }
-        };
-      })(sfx);
+      SFX[sfx] = makePool(SFX[sfx], configs[sfx] || { max: 4, cooldown: 80, volume: 0.7 });
     }
   }
 })();
