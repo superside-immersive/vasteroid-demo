@@ -13,6 +13,42 @@ $(function () {
   var canvasNode = canvas[0];
   var gameContainer = document.getElementById('game-container');
 
+  // Retro TV post-process toggle (scanlines/noise/RGB drift/tracking)
+  var retroEnabled = false;
+  (function initRetroToggle() {
+    try {
+      retroEnabled = localStorage.getItem('retroTvEnabled') === '1';
+    } catch (e) {
+      retroEnabled = false;
+    }
+
+    if (window.RetroFX && typeof RetroFX.init === 'function') {
+      RetroFX.init(Game.canvasWidth, Game.canvasHeight);
+      RetroFX.setEnabled(retroEnabled);
+    }
+
+    var btn = document.getElementById('toggle-retro-tv');
+    var renderBtn = function () {
+      if (!btn) return;
+      btn.textContent = retroEnabled ? 'Retro TV: ON' : 'Retro TV: OFF';
+      btn.setAttribute('aria-pressed', retroEnabled ? 'true' : 'false');
+    };
+    renderBtn();
+
+    if (btn) {
+      btn.addEventListener('click', function () {
+        retroEnabled = !retroEnabled;
+        if (window.RetroFX && typeof RetroFX.setEnabled === 'function') {
+          RetroFX.setEnabled(retroEnabled);
+        }
+        try {
+          localStorage.setItem('retroTvEnabled', retroEnabled ? '1' : '0');
+        } catch (e) {}
+        renderBtn();
+      });
+    }
+  })();
+
   // Offscreen buffer for a quick-and-dirty bloom/glow pass
   var glowCanvas = document.createElement('canvas');
   glowCanvas.width = Game.canvasWidth;
@@ -42,7 +78,11 @@ $(function () {
   Game.sprites = [];
   Sprite.prototype.context = context;
   Sprite.prototype.grid = grid;
-  Sprite.prototype.matrix = new Matrix(2, 3);
+  // Each sprite gets its own matrix via lazy getter to avoid prototype pollution
+  Sprite.prototype.getMatrix = function() {
+    if (!this._matrix) this._matrix = new Matrix(2, 3);
+    return this._matrix;
+  };
 
   // Create ship
   var ship = new Ship();
@@ -206,6 +246,11 @@ $(function () {
     // Additive bloom/glow overlay for extra punch
     if (bloomEnabled) {
       applyGlowBloom();
+    }
+
+    // Retro TV overlay pass (keeps base colors, adds subtle monitor artifacts)
+    if (retroEnabled && window.RetroFX && typeof RetroFX.apply === 'function') {
+      RetroFX.apply(context, canvasNode, thisFrame);
     }
 
     // (framerate display removed)

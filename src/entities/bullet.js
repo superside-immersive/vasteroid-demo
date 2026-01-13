@@ -29,66 +29,12 @@ var Bullet = function () {
       var dirX = speed > 0 ? this.vel.x / speed : 0;
       var dirY = speed > 0 ? this.vel.y / speed : 0;
       
-      // Bullet length based on speed
-      var length = 8;
-      var tailX = x - dirX * length;
-      var tailY = y - dirY * length;
-      
-      ctx.save();
-      ctx.lineCap = 'round';
-      
-      // Layer 1: Outer glow (large, faint)
-      ctx.beginPath();
-      ctx.moveTo(tailX, tailY);
-      ctx.lineTo(x + dirX * 2, y + dirY * 2);
-      ctx.strokeStyle = 'rgba(31, 217, 254, 0.15)';
-      ctx.lineWidth = 12;
-      ctx.stroke();
-      
-      // Layer 2: Medium glow
-      ctx.beginPath();
-      ctx.moveTo(tailX, tailY);
-      ctx.lineTo(x + dirX * 2, y + dirY * 2);
-      ctx.strokeStyle = 'rgba(31, 217, 254, 0.3)';
-      ctx.lineWidth = 8;
-      ctx.stroke();
-      
-      // Layer 3: Inner glow
-      ctx.beginPath();
-      ctx.moveTo(tailX + dirX * 2, tailY + dirY * 2);
-      ctx.lineTo(x + dirX * 2, y + dirY * 2);
-      ctx.strokeStyle = 'rgba(31, 217, 254, 0.6)';
-      ctx.lineWidth = 5;
-      ctx.stroke();
-      
-      // Layer 4: Core bright line
-      ctx.beginPath();
-      ctx.moveTo(tailX + dirX * 3, tailY + dirY * 3);
-      ctx.lineTo(x + dirX * 2, y + dirY * 2);
-      ctx.strokeStyle = 'rgba(200, 240, 255, 0.9)';
-      ctx.lineWidth = 3;
-      ctx.stroke();
-      
-      // Layer 5: Hot center (white core)
-      ctx.beginPath();
-      ctx.moveTo(tailX + dirX * 4, tailY + dirY * 4);
-      ctx.lineTo(x + dirX * 1, y + dirY * 1);
-      ctx.strokeStyle = '#FFFFFF';
-      ctx.lineWidth = 1.5;
-      ctx.stroke();
+      // Use shared glow renderer
+      var length = GAME_CONFIG.bullet.length;
+      GlowRenderer.drawTrail(ctx, x, y, dirX, dirY, length, GlowRenderer.PLAYER_COLORS);
       
       // Front tip glow point
-      ctx.beginPath();
-      ctx.arc(x + dirX * 2, y + dirY * 2, 3, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(31, 217, 254, 0.5)';
-      ctx.fill();
-      
-      ctx.beginPath();
-      ctx.arc(x + dirX * 2, y + dirY * 2, 1.5, 0, Math.PI * 2);
-      ctx.fillStyle = '#FFFFFF';
-      ctx.fill();
-      
-      ctx.restore();
+      GlowRenderer.drawTipGlow(ctx, x + dirX * 2, y + dirY * 2, 'rgba(31, 217, 254, 0.5)');
     }
   };
 
@@ -100,7 +46,7 @@ var Bullet = function () {
     if (this.visible) {
       this.time += delta;
     }
-    if (this.time > 50) {
+    if (this.time > GAME_CONFIG.bullet.lifetime) {
       this.visible = false;
       this.time = 0;
     }
@@ -149,46 +95,8 @@ var AlienBullet = function () {
       var dirX = speed > 0 ? this.vel.x / speed : 0;
       var dirY = speed > 0 ? this.vel.y / speed : 0;
       
-      var length = 6;
-      var tailX = x - dirX * length;
-      var tailY = y - dirY * length;
-      
-      ctx.save();
-      ctx.lineCap = 'round';
-      
-      // Layer 1: Outer glow (red/orange)
-      ctx.beginPath();
-      ctx.moveTo(tailX, tailY);
-      ctx.lineTo(x + dirX * 1, y + dirY * 1);
-      ctx.strokeStyle = 'rgba(255, 100, 50, 0.2)';
-      ctx.lineWidth = 10;
-      ctx.stroke();
-      
-      // Layer 2: Medium glow
-      ctx.beginPath();
-      ctx.moveTo(tailX, tailY);
-      ctx.lineTo(x + dirX * 1, y + dirY * 1);
-      ctx.strokeStyle = 'rgba(255, 80, 30, 0.4)';
-      ctx.lineWidth = 6;
-      ctx.stroke();
-      
-      // Layer 3: Inner glow
-      ctx.beginPath();
-      ctx.moveTo(tailX + dirX * 1, tailY + dirY * 1);
-      ctx.lineTo(x + dirX * 1, y + dirY * 1);
-      ctx.strokeStyle = 'rgba(255, 150, 50, 0.7)';
-      ctx.lineWidth = 3;
-      ctx.stroke();
-      
-      // Layer 4: Hot center
-      ctx.beginPath();
-      ctx.moveTo(tailX + dirX * 2, tailY + dirY * 2);
-      ctx.lineTo(x, y);
-      ctx.strokeStyle = 'rgba(255, 220, 150, 0.95)';
-      ctx.lineWidth = 1.5;
-      ctx.stroke();
-      
-      ctx.restore();
+      // Use shared glow renderer with alien colors
+      GlowRenderer.drawTrail(ctx, x, y, dirX, dirY, 6, GlowRenderer.ALIEN_COLORS);
     }
   };
 };

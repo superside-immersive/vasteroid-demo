@@ -8,6 +8,11 @@ var IntroManager = {
   logoLoaded: false,
   logoSize: { w: 1438, h: 356 },
 
+  // Background close-up asteroids drifting down behind the logo
+  bgBlob: null,
+  nextBlobAt: 0,
+  lastFrameTs: null,
+
   state: {
     done: false,
     startTime: null,
@@ -41,6 +46,10 @@ var IntroManager = {
     this.state.props.logoAlpha = 1;
     this.state.props.shipAlpha = 0;
     this.state.props.shipScale = 0.6;
+
+    this.bgBlob = null;
+    this.nextBlobAt = Date.now() + 2200;
+    this.lastFrameTs = null;
   },
 
   /**
@@ -105,6 +114,14 @@ var IntroManager = {
     }
 
     if (this.state.done || !this.logoLoaded) return;
+
+    // Time step for drifting background blobs
+    var now = Date.now();
+    if (this.lastFrameTs === null) this.lastFrameTs = now;
+    var dtMs = Math.min(100, now - this.lastFrameTs);
+    this.lastFrameTs = now;
+
+    this._updateAndRenderBackgroundBlob(context, dtMs);
 
     // If user hasn't requested start yet, keep logo visible (no autoplay).
     if (!this.state.playRequested) {
@@ -267,5 +284,80 @@ var IntroManager = {
     ship.visible = originalVisible;
     
     context.restore();
+  },
+
+  /**
+   * Spawn a large “close” asteroid to drift behind the logo
+   */
+  _spawnBackgroundBlob: function() {
+    var blob = new Asteroid();
+
+    // Much higher density than before (avoid “floating letters everywhere” look)
+    // Keep it bounded to feel like one cohesive asteroid.
+    var desiredChars = Math.max(520, Math.floor((ASTEROID_CHAR_COUNT || 200) * 2.6));
+    desiredChars = Math.min(900, desiredChars);
+
+    // Radius tuned so density reads as a solid blob, not sparse points.
+    var radius = 68 + Math.random() * 18;
+    blob.setSize(desiredChars, radius);
+
+    // Scale chosen so blob can feel huge but still show its silhouette/limits on screen.
+    var minDim = Math.min(Game.canvasWidth, Game.canvasHeight);
+    var targetDiameter = minDim * (0.78 + Math.random() * 0.12); // keeps edges visible
+    blob.scale = targetDiameter / (2 * radius);
+
+    // Center X in a safe range so the silhouette stays visible.
+    var maxXInset = Math.min(Game.canvasWidth * 0.25, radius * blob.scale * 0.35);
+    blob.x = maxXInset + Math.random() * (Game.canvasWidth - 2 * maxXInset);
+
+    // Start fully above screen and drift down past bottom.
+    blob.y = -(radius * blob.scale) - 60;
+
+    blob.bridgesH = false;
+    blob.bridgesV = false;
+    blob.visible = true;
+
+    // Downward drift. Faster than stars a bit so it clearly “passes by”.
+    blob.speedY = 55 + Math.random() * 45;
+    blob.driftX = (Math.random() - 0.5) * 10;
+    blob.time = Math.random() * 12;
+    blob.timeScale = 1.35 + Math.random() * 0.9;
+
+    // Slight dim so it stays behind the logo visually.
+    blob.alphaScale = 0.65;
+
+    return blob;
+  },
+
+  /**
+   * Update and render close-up asteroids behind the logo
+   */
+  _updateAndRenderBackgroundBlob: function(context, dtMs) {
+    var now = Date.now();
+
+    // Spawn occasionally (not constant on-screen)
+    if (!this.bgBlob && now >= this.nextBlobAt) {
+      this.bgBlob = this._spawnBackgroundBlob();
+    }
+
+    if (!this.bgBlob) return;
+
+    var b = this.bgBlob;
+    var dt = dtMs / 1000;
+    b.y += b.speedY * dt;
+    b.x += b.driftX * dt;
+    b.time += dt * (b.timeScale || 1);
+
+    // Render behind the logo
+    context.save();
+    b.draw();
+    context.restore();
+
+    // Cull once fully off-screen and set a cooldown.
+    var bottomEdge = b.y - (b.clusterRadius * b.scale);
+    if (bottomEdge > Game.canvasHeight + 80) {
+      this.bgBlob = null;
+      this.nextBlobAt = now + 4200 + Math.random() * 4200;
+    }
   }
 };

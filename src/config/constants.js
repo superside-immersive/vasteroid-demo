@@ -46,6 +46,54 @@ var ASTEROID_CHAR_COUNT = 200;
 // Global flag for showing hitboxes (debug)
 var SHOW_HITBOXES = false;
 
+// ========================================
+// Game Balance Configuration
+// ========================================
+
+var GAME_CONFIG = {
+  // Ship settings
+  ship: {
+    rotationSpeed: 6,
+    thrustAcceleration: 0.5,
+    bulletCooldown: 10,
+    hitCooldown: 15,
+    doubleFireUpgradeLevel: 2
+  },
+
+  // Bullet settings
+  bullet: {
+    lifetime: 50,
+    speed: 10,
+    length: 8
+  },
+
+  // Alien settings
+  alien: {
+    speed: 1.5,
+    bulletSpeed: 6,
+    bulletCooldown: 22,
+    bulletCount: 3,
+    spawnDelayMs: 30000,
+    scoreValue: 200
+  },
+
+  // Asteroid settings
+  asteroid: {
+    minSplitChars: 12,
+    tripleSplitThreshold: 36,
+    fragmentRadiusMultiplier: 0.65,
+    scorePerChar: 5
+  },
+
+  // Gameplay settings
+  gameplay: {
+    startingLives: 3,
+    extraLifeScore: 10000,
+    initialAsteroidCount: 5,
+    maxAsteroidCount: 12
+  }
+};
+
 /**
  * Get stroke color based on sprite name
  * @param {string} name - Sprite name

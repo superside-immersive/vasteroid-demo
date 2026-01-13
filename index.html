@@ -23,12 +23,14 @@
     <script src="src/utils/matrix.js"></script>
     <script src="src/utils/grid-node.js"></script>
     <script src="src/utils/text-renderer.js"></script>
+    <script src="src/utils/glow-renderer.js"></script>
 
     <!-- UI Helpers -->
     <script src="src/ui/animations.js"></script>
     <script src="src/ui/hud.js"></script>
     <script src="src/ui/scoreboard.js"></script>
     <script src="src/ui/game-over.js"></script>
+    <script src="src/ui/retro-fx.js"></script>
     
     <!-- Audio -->
     <script src="src/audio/sfx.js"></script>
@@ -130,6 +132,7 @@
       Letras por asteroide: 
       <input id="char-slider" type="range" min="40" max="400" step="10" value="200" style="width:240px; vertical-align:middle;">
       <span id="char-value" style="display:inline-block; width:40px; text-align:right;">200</span>
+      <button id="toggle-retro-tv" aria-pressed="false" style="margin-left:10px; padding:6px 10px; background:#0f162f; color:#E5E7EB; border:1px solid #1FD9FE; border-radius:6px; cursor:pointer;">Retro TV: OFF</button>
     </div>
     
     <div class="controls-info">

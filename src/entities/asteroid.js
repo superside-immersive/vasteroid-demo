@@ -190,6 +190,13 @@ var Asteroid = function () {
   this.isFragment = false;
   this.billboardLerp = 0.03; // Speed of rotation alignment (higher = faster)
 
+  // Fragment generation: 0 = original, 1 = first split, 2 = second split, etc.
+  // Used for outline styling: generations 1+ get irregular polygon, final (non-splittable) gets cube
+  this.fragmentGeneration = 0;
+
+  // Pre-generate irregular outline vertices for this asteroid
+  this._outlinePoints = null;
+
   this.collidesWith = ["ship", "bullet", "bigalien", "alienbullet"];
 
   /**
@@ -213,6 +220,11 @@ var Asteroid = function () {
 
     // Ultra-optimized character rendering using cached sprites
     this._drawCharacters(ctx);
+
+    // Draw outline for fragments
+    if (this.isFragment && this.fragmentGeneration > 0) {
+      this._drawFragmentOutline(ctx);
+    }
 
     ctx.restore();
   };
@@ -247,10 +259,82 @@ var Asteroid = function () {
   };
 
   /**
+   * Generate irregular polygon outline points
+   * @param {number} numPoints - Number of vertices
+   * @param {number} radius - Base radius
+   * @returns {Array} - Array of {x, y} points
+   */
+  this._generateIrregularOutline = function(numPoints, radius) {
+    var points = [];
+    var angleStep = (Math.PI * 2) / numPoints;
+    for (var i = 0; i < numPoints; i++) {
+      var angle = i * angleStep + (Math.random() - 0.5) * angleStep * 0.6;
+      var r = radius * (0.75 + Math.random() * 0.5);
+      points.push({
+        x: Math.cos(angle) * r,
+        y: Math.sin(angle) * r
+      });
+    }
+    return points;
+  };
+
+  /**
+   * Draw outline around fragment based on generation
+   * @param {CanvasRenderingContext2D} ctx - Canvas context
+   */
+  this._drawFragmentOutline = function(ctx) {
+    var r = this.clusterRadius * this.scale * 0.85;
+    var isFinalFragment = this.charCount < GAME_CONFIG.asteroid.minSplitChars;
+
+    ctx.save();
+    ctx.translate(this.x, this.y);
+
+    // Slight rotation wobble for visual interest
+    var wobble = Math.sin(this.time * 1.5) * 0.03;
+    ctx.rotate(wobble);
+
+    ctx.strokeStyle = THEME.primary;
+    ctx.lineWidth = 1.2;
+    ctx.globalAlpha = 0.45 + Math.sin(this.time * 2) * 0.1;
+
+    ctx.beginPath();
+
+    if (isFinalFragment) {
+      // Final fragment: draw a cube/square outline
+      var s = r * 0.9;
+      ctx.rect(-s, -s, s * 2, s * 2);
+    } else {
+      // Non-final fragment: irregular polygon outline
+      if (!this._outlinePoints) {
+        var numVerts = 6 + Math.floor(Math.random() * 4); // 6-9 vertices
+        this._outlinePoints = this._generateIrregularOutline(numVerts, r);
+      }
+
+      var pts = this._outlinePoints;
+      var scale = r / (this.clusterRadius * 0.85); // Adjust for current scale
+      ctx.moveTo(pts[0].x * scale, pts[0].y * scale);
+      for (var i = 1; i < pts.length; i++) {
+        ctx.lineTo(pts[i].x * scale, pts[i].y * scale);
+      }
+      ctx.closePath();
+    }
+
+    ctx.stroke();
+
+    // Add subtle inner glow
+    ctx.globalAlpha = 0.08;
+    ctx.fillStyle = THEME.primary;
+    ctx.fill();
+
+    ctx.restore();
+  };
+
+  /**
    * Draw all characters using cached sprite images with 3D orbital motion
    * @param {CanvasRenderingContext2D} ctx - Canvas context
    */
   this._drawCharacters = function(ctx) {
+    var alphaScale = (this.alphaScale == null) ? 1 : this.alphaScale;
     var radius = this.clusterRadius * this.scale;
     var t = this.time;
     var chars = this.chars;
@@ -320,11 +404,12 @@ var Asteroid = function () {
       
       // Depth effects: scale and alpha based on Z
       var depthFactor = 0.6 + (sc.z + 0.5) * 0.8; // 0.6 to 1.4
-      var alpha = 0.5 + (sc.z + 0.5) * 0.5; // 0.5 to 1.0
+      var alpha = (0.5 + (sc.z + 0.5) * 0.5) * alphaScale; // 0.5..1.0 scaled
       
       var drawScale = baseScale * depthFactor;
       
-      ctx.globalAlpha = Math.min(1, Math.max(0.3, alpha));
+      var minAlpha = 0.3 * alphaScale;
+      ctx.globalAlpha = Math.min(1, Math.max(minAlpha, alpha));
       
       // Draw cached sprite with rotation
       var cos = Math.cos(c.rot) * drawScale;
@@ -364,11 +449,11 @@ var Asteroid = function () {
    */
   this.collision = function (other) {
     SFX.explosion();
-    if (other.name == "bullet") Game.score += 5 * this.charCount;
+    if (other.name == "bullet") Game.score += GAME_CONFIG.asteroid.scorePerChar * this.charCount;
 
     // Split into smaller clusters (lower threshold so it always subdivides)
-    if (this.charCount >= 12) {
-      var numGroups = this.charCount >= 36 ? 3 : 2;
+    if (this.charCount >= GAME_CONFIG.asteroid.minSplitChars) {
+      var numGroups = this.charCount >= GAME_CONFIG.asteroid.tripleSplitThreshold ? 3 : 2;
       var baseSize = Math.floor(this.charCount / numGroups);
       var remainder = this.charCount % numGroups;
 
@@ -398,6 +483,9 @@ var Asteroid = function () {
 
     // Mark as fragment for billboard alignment
     newRoid.isFragment = true;
+    
+    // Increment fragment generation for outline styling
+    newRoid.fragmentGeneration = (this.fragmentGeneration || 0) + 1;
     
     newRoid.charCount = charsPerGroup;
     newRoid.chars = [];
@@ -430,7 +518,7 @@ var Asteroid = function () {
       });
     }
 
-    newRoid.clusterRadius = Math.max(25, this.clusterRadius * 0.65);
+    newRoid.clusterRadius = Math.max(25, this.clusterRadius * GAME_CONFIG.asteroid.fragmentRadiusMultiplier);
     newRoid.scale = this.scale;
     newRoid.time = 0;
 

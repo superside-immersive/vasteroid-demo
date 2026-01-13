@@ -98,9 +98,9 @@ var Ship = function () {
   this.preMove = function (delta) {
     // Rotation control
     if (KEY_STATUS.left) {
-      this.vel.rot = -6;
+      this.vel.rot = -GAME_CONFIG.ship.rotationSpeed;
     } else if (KEY_STATUS.right) {
-      this.vel.rot = 6;
+      this.vel.rot = GAME_CONFIG.ship.rotationSpeed;
     } else {
       this.vel.rot = 0;
     }
@@ -108,8 +108,8 @@ var Ship = function () {
     // Thrust control
     if (KEY_STATUS.up) {
       var rad = ((this.rot - 90) * Math.PI) / 180;
-      this.acc.x = 0.5 * Math.cos(rad);
-      this.acc.y = 0.5 * Math.sin(rad);
+      this.acc.x = GAME_CONFIG.ship.thrustAcceleration * Math.cos(rad);
+      this.acc.y = GAME_CONFIG.ship.thrustAcceleration * Math.sin(rad);
       this.children.exhaust.visible = Math.random() > 0.1;
     } else {
       this.acc.x = 0;
@@ -128,10 +128,10 @@ var Ship = function () {
     
     if (KEY_STATUS.space) {
       if (this.bulletCounter <= 0) {
-        this.bulletCounter = 10;
+        this.bulletCounter = GAME_CONFIG.ship.bulletCooldown;
         
         // Double shot at upgrade level 2+ (requested)
-        var bulletsToFire = (Game.upgradeLevel >= 2) ? 2 : 1;
+        var bulletsToFire = (Game.upgradeLevel >= GAME_CONFIG.ship.doubleFireUpgradeLevel) ? 2 : 1;
         var bulletsFired = 0;
         
         for (var i = 0; i < this.bullets.length && bulletsFired < bulletsToFire; i++) {
@@ -153,8 +153,8 @@ var Ship = function () {
             // Spawn from the CENTER of the whole formation (group centered in draw)
             bullet.x = this.x + spreadX * 4;
             bullet.y = this.y + spreadY * 4;
-            bullet.vel.x = 8 * spreadX;
-            bullet.vel.y = 8 * spreadY;
+            bullet.vel.x = GAME_CONFIG.bullet.speed * spreadX;
+            bullet.vel.y = GAME_CONFIG.bullet.speed * spreadY;
             bullet.visible = true;
             bulletsFired++;
           }
@@ -192,7 +192,7 @@ var Ship = function () {
       // Small knockback to separate from the collision
       this.vel.x *= -0.4;
       this.vel.y *= -0.4;
-      this.hitCooldown = 15;
+      this.hitCooldown = GAME_CONFIG.ship.hitCooldown;
       return;
     }
 

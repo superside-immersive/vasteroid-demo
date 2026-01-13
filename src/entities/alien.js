@@ -36,10 +36,10 @@ var BigAlien = function () {
   this.newPosition = function () {
     if (Math.random() < 0.5) {
       this.x = -20;
-      this.vel.x = 1.5;
+      this.vel.x = GAME_CONFIG.alien.speed;
     } else {
       this.x = Game.canvasWidth + 20;
-      this.vel.x = -1.5;
+      this.vel.x = -GAME_CONFIG.alien.speed;
     }
     this.y = Math.random() * Game.canvasHeight;
   };
@@ -50,7 +50,7 @@ var BigAlien = function () {
   this.setup = function () {
     this.newPosition();
 
-    for (var i = 0; i < 3; i++) {
+    for (var i = 0; i < GAME_CONFIG.alien.bulletCount; i++) {
       var bull = new AlienBullet();
       this.bullets.push(bull);
       Game.sprites.push(bull);
@@ -88,7 +88,7 @@ var BigAlien = function () {
     // Shooting logic
     this.bulletCounter -= delta;
     if (this.bulletCounter <= 0) {
-      this.bulletCounter = 22;
+      this.bulletCounter = GAME_CONFIG.alien.bulletCooldown;
       
       for (var i = 0; i < this.bullets.length; i++) {
         if (!this.bullets[i].visible) {
@@ -99,8 +99,8 @@ var BigAlien = function () {
           
           bullet.x = this.x;
           bullet.y = this.y;
-          bullet.vel.x = 6 * vectorx;
-          bullet.vel.y = 6 * vectory;
+          bullet.vel.x = GAME_CONFIG.alien.bulletSpeed * vectorx;
+          bullet.vel.y = GAME_CONFIG.alien.bulletSpeed * vectory;
           bullet.visible = true;
           SFX.laser();
           break;
@@ -135,7 +135,7 @@ BigAlien.prototype = new Sprite();
  * @param {Sprite} other - Colliding sprite
  */
 BigAlien.prototype.collision = function (other) {
-  if (other.name == "bullet") Game.score += 200;
+  if (other.name == "bullet") Game.score += GAME_CONFIG.alien.scoreValue;
   SFX.explosion();
   Game.explosionAt(other.x, other.y);
   this.visible = false;

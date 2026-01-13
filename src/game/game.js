@@ -5,7 +5,7 @@
 
 var Game = {
   score: 0,
-  totalAsteroids: 5,
+  totalAsteroids: GAME_CONFIG ? GAME_CONFIG.gameplay.initialAsteroidCount : 5,
   lives: 0,
 
   // Fractal upgrade state (triples visual ship clones per level)
