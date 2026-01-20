@@ -2,11 +2,31 @@
 
 var Animations = (function() {
   function pulse(targets, opts) {
+    // Smooth breathing pulse for buttons
     return anime(Object.assign({
       targets: targets,
-      scale: [1, 1.12, 1],
-      duration: 320,
-      easing: 'easeOutQuad'
+      scale: [1, 1.05, 1],
+      opacity: [0.85, 1, 0.85],
+      duration: 1800,
+      easing: 'easeInOutSine',
+      loop: true
+    }, opts || {}));
+  }
+
+  function pulseGlow(targets, opts) {
+    // Elegant glow pulse with text-shadow animation
+    return anime(Object.assign({
+      targets: targets,
+      scale: [1, 1.03, 1],
+      opacity: [0.8, 1, 0.8],
+      textShadow: [
+        '0 0 8px rgba(124, 240, 255, 0.4)',
+        '0 0 20px rgba(124, 240, 255, 0.8), 0 0 40px rgba(31, 217, 254, 0.4)',
+        '0 0 8px rgba(124, 240, 255, 0.4)'
+      ],
+      duration: 2000,
+      easing: 'easeInOutSine',
+      loop: true
     }, opts || {}));
   }
 
@@ -52,6 +72,7 @@ var Animations = (function() {
 
   return {
     pulse: pulse,
+    pulseGlow: pulseGlow,
     fadeIn: fadeIn,
     fadeOut: fadeOut,
     staggerLetters: staggerLetters
@@ -84,8 +105,8 @@ var LevelTransitionManager = (function() {
     stars = [];
     for (var i = 0; i < count; i++) {
       stars.push({
-        x: Math.random() * Game.canvasWidth,
-        y: -Math.random() * Game.canvasHeight * 0.6,
+        x: Game.canvasWidth + Math.random() * Game.canvasWidth * 0.6, // Start from right
+        y: Math.random() * Game.canvasHeight,
         speed: 4 + Math.random() * 6,
         len: 10 + Math.random() * 18,
         alpha: 0.35 + Math.random() * 0.45
@@ -126,10 +147,10 @@ var LevelTransitionManager = (function() {
     ship.visible = true;
 
     var timeline = anime.timeline({ autoplay: true });
-    // Rotate ship upward
+    // Rotate ship to point RIGHT (90 degrees clockwise)
     timeline.add({
       targets: shipOverlay,
-      rot: 0,
+      rot: 90, // 90 degrees = pointing right
       duration: 900,
       easing: 'easeOutCubic'
     });
@@ -172,22 +193,22 @@ var LevelTransitionManager = (function() {
       ctx.globalAlpha = fadeFactor;
       for (var i = 0; i < stars.length; i++) {
         var s = stars[i];
-        s.y += s.speed * (1.0 + starProgress * 2.4);
+        s.x -= s.speed * (1.0 + starProgress * 2.4); // Move LEFT
         var len = s.len * (1.0 + starProgress * 1.2);
-        var x = s.x + Math.sin(starProgress * 3 + i * 0.5) * 1.2; // subtle drift
-        var y1 = s.y;
-        var y2 = s.y + len;
+        var y = s.y + Math.sin(starProgress * 3 + i * 0.5) * 1.2; // subtle drift
+        var x1 = s.x;
+        var x2 = s.x + len; // Horizontal trail
 
         ctx.strokeStyle = 'rgba(124, 240, 255,' + (s.alpha * (1 - starProgress * 0.15)) + ')';
         ctx.beginPath();
-        ctx.moveTo(x, y1);
-        ctx.lineTo(x, y2);
+        ctx.moveTo(x1, y);
+        ctx.lineTo(x2, y); // Horizontal line
         ctx.stroke();
 
-        // Recycle stars so the effect lasts the whole transition
-        if (y1 > Game.canvasHeight + 80) {
-          s.y = -Math.random() * Game.canvasHeight * 0.6;
-          s.x = Math.random() * Game.canvasWidth;
+        // Recycle stars from right when they exit left
+        if (x2 < -80) {
+          s.x = Game.canvasWidth + Math.random() * Game.canvasWidth * 0.6;
+          s.y = Math.random() * Game.canvasHeight;
           s.alpha = 0.35 + Math.random() * 0.45;
           s.speed = 4 + Math.random() * 6;
           s.len = 10 + Math.random() * 18;
@@ -208,8 +229,8 @@ var LevelTransitionManager = (function() {
 
   function finishShipOverlay() {
     if (!shipOverlay.active || !shipOverlay.ship) return;
-    // Keep ship in its current position and facing forward (up)
-    shipOverlay.ship.rot = 0;
+    // Keep ship in its current position and facing RIGHT (90 degrees)
+    shipOverlay.ship.rot = 90;
     shipOverlay.ship.visible = true;
     if (shipOverlay.origin) {
       shipOverlay.ship.scale = shipOverlay.origin.scale;
@@ -248,7 +269,7 @@ var LevelTransitionManager = (function() {
 var IdleAnimationManager = (function() {
   var active = false;
   var stars = [];
-  var textState = { y: -200, alpha: 1 };
+  var textState = { x: 0, alpha: 1 }; // Now uses X for horizontal movement
   var textTimeline = null;
   var textStarted = false;
   var cycleCount = 0;
@@ -261,8 +282,8 @@ var IdleAnimationManager = (function() {
     stars = [];
     for (var i = 0; i < count; i++) {
       stars.push({
-        x: Math.random() * Game.canvasWidth,
-        y: -Math.random() * Game.canvasHeight * 0.8,
+        x: Game.canvasWidth + Math.random() * 100, // Start from right
+        y: Math.random() * Game.canvasHeight,
         speed: 2 + Math.random() * 4,
         len: 6 + Math.random() * 12,
         alpha: 0.25 + Math.random() * 0.35
@@ -271,7 +292,7 @@ var IdleAnimationManager = (function() {
   }
 
   function resetTextState() {
-    textState.y = -200;
+    textState.x = Game.canvasWidth + 200; // Start from right
     textState.alpha = 1;
     textStarted = false;
     cycleCount = 0;
@@ -312,19 +333,19 @@ var IdleAnimationManager = (function() {
   function startTextCycle() {
     if (textTimeline || !active) return;
 
-    var startY = -200;
-    var endY = Game.canvasHeight + 200;
+    var startX = Game.canvasWidth + 200; // Start from right
+    var endX = -400; // Exit to left
 
     textStarted = true;
-    textState.y = startY;
+    textState.x = startX;
     textState.alpha = 1;
 
     textTimeline = anime.timeline({ loop: false });
     textTimeline
       .add({
         targets: textState,
-        y: [startY, endY],
-        duration: 5000,
+        x: [startX, endX],
+        duration: 6000,
         easing: 'linear'
       });
 
@@ -333,7 +354,7 @@ var IdleAnimationManager = (function() {
       cycleCount++;
       textTimeline = null;
       textStarted = false;
-      textState.y = startY;
+      textState.x = startX;
       
       // Every 2 cycles, show scoreboard
       if (cycleCount % 2 === 0 && !scoreboardShowing) {
@@ -389,7 +410,7 @@ var IdleAnimationManager = (function() {
 
     maybeStartTextCycle();
 
-    // Always render stars
+    // Always render stars (moving right to left)
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
     ctx.lineCap = 'round';
@@ -397,20 +418,21 @@ var IdleAnimationManager = (function() {
 
     for (var i = 0; i < stars.length; i++) {
       var s = stars[i];
-      s.y += s.speed;
-      var x = s.x + Math.sin(Date.now() * 0.0005 + i) * 0.8;
-      var y1 = s.y;
-      var y2 = s.y + s.len;
+      s.x -= s.speed; // Move LEFT
+      var y = s.y + Math.sin(Date.now() * 0.0005 + i) * 0.8;
+      var x1 = s.x;
+      var x2 = s.x + s.len; // Horizontal trail
 
       ctx.strokeStyle = 'rgba(124, 240, 255,' + s.alpha + ')';
       ctx.beginPath();
-      ctx.moveTo(x, y1);
-      ctx.lineTo(x, y2);
+      ctx.moveTo(x1, y);
+      ctx.lineTo(x2, y); // Horizontal line
       ctx.stroke();
 
-      if (y1 > Game.canvasHeight + 60) {
-        s.y = -Math.random() * 100;
-        s.x = Math.random() * Game.canvasWidth;
+      // Recycle from right when exiting left
+      if (x2 < -60) {
+        s.x = Game.canvasWidth + Math.random() * 100;
+        s.y = Math.random() * Game.canvasHeight;
       }
     }
 
@@ -420,7 +442,7 @@ var IdleAnimationManager = (function() {
   }
 
   function isActive() { return active; }
-  function isTextVisible() { return textStarted && textState.y > 0 && textState.y < Game.canvasHeight; }
+  function isTextVisible() { return textStarted && textState.x > -300 && textState.x < Game.canvasWidth + 100; }
 
   return {
     start: start,

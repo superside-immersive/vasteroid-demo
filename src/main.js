@@ -352,23 +352,11 @@ $(function () {
   }
 
   /**
-   * Draw heads-up display (score, lives)
+   * Draw heads-up display (score only)
    */
   function drawHUD(ctx, extraDude) {
     HUD.updateScore(Game.score);
-    HUD.updateLives(Game.lives);
-
-    // Keep ship icons for a subtle callback to the classic HUD
-    for (var i = 0; i < Game.lives; i++) {
-      ctx.save();
-      ctx.strokeStyle = THEME.muted;
-      ctx.globalAlpha = 0.5;
-      extraDude.x = Game.canvasWidth - (10 * (i + 1));
-      extraDude.y = 36;
-      extraDude.configureTransform();
-      extraDude.draw();
-      ctx.restore();
-    }
+    // Lives display removed
   }
 
   // Start game loop

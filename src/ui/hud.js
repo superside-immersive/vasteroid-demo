@@ -24,6 +24,7 @@ var HUD = (function() {
     livesNode = document.createElement('div');
     livesNode.className = 'hud-chip';
     livesNode.textContent = 'LIVES ×0';
+    livesNode.style.display = 'none'; // Hide lives display
 
     bar.appendChild(scoreNode);
     bar.appendChild(livesNode);
